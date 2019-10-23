@@ -10,11 +10,14 @@ def test_base_dataset(workers):
     bob = workers["bob"]
     inputs = th.tensor([1, 2, 3, 4.0])
     targets = th.tensor([1, 2, 3, 4.0])
-    dataset = BaseDataset(inputs, targets)
+    dataset = BaseDataset(inputs, targets, id=1, tags=["#test_dataset"], description="test dataset")
 
     assert len(dataset) == 4
     assert dataset[2] == (3, 3)
 
+    assert dataset.id == 1
+    assert dataset.tags[0] == "#test_dataset"
+    assert dataset.description == "test dataset"
     dataset.send(bob)
     assert dataset.data.location.id == "bob"
     assert dataset.targets.location.id == "bob"
@@ -50,7 +53,13 @@ def test_federated_dataset(workers):
     bob = workers["bob"]
     alice = workers["alice"]
 
-    alice_base_dataset = BaseDataset(th.tensor([3, 4, 5, 6]), th.tensor([3, 4, 5, 6]))
+    alice_base_dataset = BaseDataset(
+        th.tensor([3, 4, 5, 6]),
+        th.tensor([3, 4, 5, 6]),
+        id=1,
+        description="alice description",
+        tags=["alice's dataset"],
+    )
     datasets = [
         BaseDataset(th.tensor([1, 2]), th.tensor([1, 2])).send(bob),
         alice_base_dataset.send(alice),
@@ -64,6 +73,8 @@ def test_federated_dataset(workers):
     fed_dataset["alice"].get()
     assert (fed_dataset["alice"].data == alice_base_dataset.data).all()
     assert fed_dataset["alice"][2] == (5, 5)
+    assert fed_dataset["alice"].description == "alice description"
+    assert fed_dataset["alice"].tags[0] == "alice's dataset"
     assert len(fed_dataset["alice"]) == 4
     assert len(fed_dataset) == 6
 

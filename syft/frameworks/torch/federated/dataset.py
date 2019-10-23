@@ -1,13 +1,17 @@
 import math
 import logging
 
+from typing import List
+from typing import Union
 import torch
 from torch.utils.data import Dataset
+import syft as sy
+from syft.generic.object import AbstractObject
 
 logger = logging.getLogger(__name__)
 
 
-class BaseDataset:
+class BaseDataset(AbstractObject):
     """
     This is a base class to be used for manipulating a dataset. This is composed
     of a .data attribute for inputs and a .targets one for labels. It is to
@@ -19,10 +23,23 @@ class BaseDataset:
         data[list,torch tensors]: the data points
         targets: Corresponding labels of the data points
         transform: Function to transform the datapoints
-
+        id: dataset id
+        owner: dataset owner
+        tags: dataset tags
+        description: dataset decription
     """
 
-    def __init__(self, data, targets, transform=None):
+    def __init__(
+        self,
+        data,
+        targets,
+        transform=None,
+        id: Union[str, int] = None,
+        owner: "sy.workers.AbstractWorker" = None,
+        tags: List[str] = None,
+        description: str = None,
+    ):
+        super().__init__(id=id, owner=owner, tags=tags, description=description)
 
         self.data = data
         self.targets = targets
@@ -129,7 +146,14 @@ class BaseDataset:
         return self.data.location
 
 
-def dataset_federate(dataset, workers):
+def dataset_federate(
+    dataset,
+    workers,
+    id: Union[str, int] = None,
+    owner: "sy.workers.AbstractWorker" = None,
+    tags: List[str] = None,
+    description: str = None,
+):
     """
     Add a method to easily transform a torch.Dataset or a sy.BaseDataset
     into a sy.FederatedDataset. The dataset given is split in len(workers)
@@ -163,8 +187,19 @@ def dataset_federate(dataset, workers):
         logger.debug("Sending data to worker %s", worker.id)
         data = data.send(worker)
         targets = targets.send(worker)
-        datasets.append(BaseDataset(data, targets))  # .send(worker)
 
+        datasets.append(
+            BaseDataset(data, targets, id=id, owner=owner, tags=tags, description=description)
+        )
+
+    if dataset is not None:
+        logger.debug(dataset.id)
+        if dataset.owner is not None:
+            logger.debug(dataset.owner.id)
+        if dataset.tags is not None:
+            logger.debug(dataset.tags[0])
+        if dataset.description is not None:
+            logger.debug(dataset.description)
     logger.debug("Done!")
     return FederatedDataset(datasets)
 
