@@ -1,6 +1,8 @@
 import pytest
 import torch as th
 import syft as sy
+from syft.serde import serde
+from syft.serde import torch_serde
 
 from syft.frameworks.torch.federated import BaseDataset
 
@@ -79,6 +81,50 @@ def test_federated_dataset(workers):
     assert len(fed_dataset) == 6
 
     assert isinstance(fed_dataset.__str__(), str)
+
+
+def test_basedata_simplify():
+    """This tests our ability to simplify dataset objects
+    At the time of writing, dataset  simplify to a tuple where the
+    first value in the tuple is the a serialized version of data (tensor) and
+    second value is the  dataset's ID
+    third value is owner info which is empty
+    fourth value is serialized tags for the dataset
+    fifth value is serialized description for the dataset
+    """
+
+    # create a dataset
+    inputs = th.tensor([1, 2, 3, 4.0])
+    targets = th.tensor([1, 2, 3, 4.0])
+    dataset = BaseDataset(
+        inputs, targets, id=10, tags=["#test_dataset"], description="test dataset"
+    )
+
+    assert dataset.id == 10
+    assert dataset.tags[0] == "#test_dataset"
+    assert dataset.description == "test dataset"
+
+    # simplify the dataset
+    output = BaseDataset.simplify(dataset)
+    assert type(output) == tuple
+
+    # Followed examples from test_serde.py on how it dealt with tensor, strings
+    # etc.
+
+    # make sure inner type is correct
+    assert type(output[0]) == tuple
+
+    # make sure ID is correctly encoded
+    assert output[1] == dataset.id
+
+    # superficially testing data tensor
+    assert serde.detailers[output[0][0]] == torch_serde._detail_torch_tensor
+    # checking the input tag matches correspodning value  after the tranformation
+    # after the tranformation done by the method simplify
+    assert output[3][1][0][1][0] == bytes(dataset.tags[0], "utf-8")
+    # checking the input description to BaseDataset matches correspodning value
+    # after the tranformation done by the method simplify
+    assert output[4][1][0] == bytes(dataset.description, "utf-8")
 
 
 def test_dataset_to_federate(workers):

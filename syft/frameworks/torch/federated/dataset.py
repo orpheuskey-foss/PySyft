@@ -24,7 +24,8 @@ class BaseDataset(AbstractObject):
         targets: Corresponding labels of the data points
         transform: Function to transform the datapoints
         id: dataset id
-        owner: dataset owner
+        owner: An optional BaseWorker object to specify the worker on which
+            the dataset is located.
         tags: dataset tags
         description: dataset decription
     """
@@ -144,6 +145,25 @@ class BaseDataset(AbstractObject):
             Get location of the data
         """
         return self.data.location
+
+    @staticmethod
+    def simplify(dataset: "BaseDataset") -> tuple:
+        """Takes the attributes of a BaseDataset and saves them in a tuple.
+
+        Args:
+            dataset: a BaseDataset.
+
+        Returns:
+            tuple: a tuple holding the unique attributes of the Dataset.
+        """
+
+        return (
+            sy.serde._simplify(dataset.data),
+            sy.serde._simplify(dataset.id),
+            sy.serde._simplify(dataset.owner),
+            sy.serde._simplify(dataset.tags),
+            sy.serde._simplify(dataset.description),
+        )
 
 
 def dataset_federate(
