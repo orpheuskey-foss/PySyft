@@ -83,7 +83,7 @@ def test_federated_dataset(workers):
     assert isinstance(fed_dataset.__str__(), str)
 
 
-def test_basedata_simplify():
+def test_base_dataset_simplify():
     """This tests our ability to simplify dataset objects
     At the time of writing, dataset  simplify to a tuple where the
     first value in the tuple is the a serialized version of data (tensor) and
